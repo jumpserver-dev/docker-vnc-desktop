@@ -26,18 +26,17 @@ ARG DEPENDENCIES="                \
     tint2                         \
     menu                          \
     openssh-client                \
+    openssh-server                \
     python3-tk                    \
     xauth                         \
     libfile-readbackwards-perl    \
     xdg-user-dirs" 
 
-ARG APT_MIRROR=http://mirrors.ustc.edu.cn
 RUN set -ex \
     &&  sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/debian.sources
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=app-apt \
     --mount=type=cache,target=/var/lib/apt,sharing=locked,id=app-apt \
-    sed -i "s@http://.*.debian.org@${APT_MIRROR}@g" /etc/apt/sources.list.d/debian.sources \
     && rm -f /etc/apt/apt.conf.d/docker-clean \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && apt-get update \
@@ -48,6 +47,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=app-apt \
     && sed -i "s@# export @export @g" ~/.bashrc \
     && sed -i "s@# alias @alias @g" ~/.bashrc \
     && chmod +x /dev/shm \
+    && mkdir -p /var/run/sshd \
     && mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
