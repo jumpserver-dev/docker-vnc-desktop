@@ -37,7 +37,7 @@ RUN set -ex \
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=app-apt \
     --mount=type=cache,target=/var/lib/apt,sharing=locked,id=app-apt \
-    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    rm -f /etc/apt/apt.conf.d/docker-clean \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
