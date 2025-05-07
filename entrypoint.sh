@@ -46,7 +46,7 @@ dbus-launch --exit-with-session &
 export DISPLAY=:0
 # Start iBus for Chinese input
 export XMODIFIERS="@im=ibus"
-export GTK_IM_MODULE="xim"
+export GTK_IM_MODULE="ibus"
 export QT_IM_MODULE="ibus"
 
 export LIBGL_ALWAYS_SOFTWARE=1
