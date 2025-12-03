@@ -1,8 +1,8 @@
 
 FROM python:3.12-slim-bookworm
 ARG TARGETARCH
-ARG TIGERVNC_VERSION="1.15.0"
-ARG TIGERVNC_BASE_URL="https://sourceforge.net/projects/tigervnc/files/stable/${TIGERVNC_VERSION}/ubuntu-22.04LTS"
+ARG TIGERVNC_VERSION="1.15.0+dfsg-2"
+ARG TIGERVNC_DEB_MIRROR="https://deb.debian.org/debian"
 
 ARG DEPENDENCIES="                \
     ca-certificates               \
@@ -60,9 +60,10 @@ RUN set -ex \
         *) echo "Unsupported TARGETARCH ${TARGETARCH}" >&2; exit 1 ;; \
     esac \
     && mkdir -p /tmp/tigervnc && cd /tmp/tigervnc \
-    && deb_file="tigervncserver_${TIGERVNC_VERSION}-1ubuntu1_${DEB_ARCH}.deb" \
-    && echo "Downloading ${deb_file}" \
-    && wget -O "${deb_file}" "${TIGERVNC_BASE_URL}/${deb_file}/download" \
+    && deb_file="tigervnc-standalone-server_${TIGERVNC_VERSION}_${DEB_ARCH}.deb" \
+    && deb_url="${TIGERVNC_DEB_MIRROR}/pool/main/t/tigervnc/${deb_file}" \
+    && echo "Downloading ${deb_url}" \
+    && wget -O "${deb_file}" "${deb_url}" \
     && dpkg -i "${deb_file}" || (apt-get update && apt-get install -y -f) \
     && cd /opt \
     && rm -rf /tmp/tigervnc \
