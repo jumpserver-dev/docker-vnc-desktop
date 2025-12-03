@@ -27,6 +27,10 @@ RUN set -ex \
 
 WORKDIR /usr/src/tigervnc-1.15.0+dfsg
 
+# Adjust build-deps to match bookworm availability (bookworm has xorg-server-source 2:21.1.4)
+RUN set -ex \
+    && sed -i 's/xorg-server-source (>= 2:21.1.10)/xorg-server-source (>= 2:21.1.4)/' debian/control
+
 RUN set -ex \
     && apt-get update \
     && apt-get build-dep -y . \
