@@ -1,8 +1,40 @@
 
+FROM debian:bookworm AS tigervnc-build
+ARG DEBIAN_FRONTEND=noninteractive
+ARG TIGERVNC_VERSION="1.15.0+dfsg-2"
+
+RUN set -ex \
+    && echo "deb-src http://deb.debian.org/debian bookworm main" >> /etc/apt/sources.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        devscripts \
+        equivs \
+        dpkg-dev \
+        ca-certificates \
+        wget \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src
+
+RUN set -ex \
+    && apt-get update \
+    && dget https://deb.debian.org/debian/pool/main/t/tigervnc/tigervnc_${TIGERVNC_VERSION}.dsc \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src/tigervnc-1.15.0+dfsg
+
+RUN set -ex \
+    && apt-get update \
+    && apt-get build-dep -y . \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN set -ex \
+    && dpkg-buildpackage -b -uc -us
+
 FROM python:3.12-slim-bookworm
 ARG TARGETARCH
 ARG TIGERVNC_VERSION="1.15.0+dfsg-2"
-ARG TIGERVNC_DEB_MIRROR="https://deb.debian.org/debian"
 
 ARG DEPENDENCIES="                \
     ca-certificates               \
@@ -43,7 +75,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=app-apt \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
-    && apt-get build-dep -y --no-install-recommends tigervnc-standalone-server \
     && echo "no" | dpkg-reconfigure dash \
     && echo "zh_CN.UTF-8" | dpkg-reconfigure locales \
     && sed -i "s@# export @export @g" ~/.bashrc \
@@ -53,6 +84,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=app-apt \
     && mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
+COPY --from=tigervnc-build /usr/src/*.deb /tmp/tigervnc-src/
+
 RUN set -ex \
     && case "${TARGETARCH}" in \
         amd64) DEB_ARCH="amd64" ;; \
@@ -60,12 +93,7 @@ RUN set -ex \
         *) echo "Unsupported TARGETARCH ${TARGETARCH}" >&2; exit 1 ;; \
     esac \
     && mkdir -p /tmp/tigervnc && cd /tmp/tigervnc \
-    && for pkg in tigervnc-standalone-server tigervnc-common tigervnc-tools; do \
-        deb_file="${pkg}_${TIGERVNC_VERSION}_${DEB_ARCH}.deb"; \
-        deb_url="${TIGERVNC_DEB_MIRROR}/pool/main/t/tigervnc/${deb_file}"; \
-        echo "Downloading ${deb_url}"; \
-        wget -O "${deb_file}" "${deb_url}"; \
-      done \
+    && cp /tmp/tigervnc-src/*_${DEB_ARCH}.deb . \
     && dpkg -i ./*.deb || (apt-get update && apt-get install -y -f) \
     && cd /opt \
     && rm -rf /tmp/tigervnc \
