@@ -60,11 +60,13 @@ RUN set -ex \
         *) echo "Unsupported TARGETARCH ${TARGETARCH}" >&2; exit 1 ;; \
     esac \
     && mkdir -p /tmp/tigervnc && cd /tmp/tigervnc \
-    && deb_file="tigervnc-standalone-server_${TIGERVNC_VERSION}_${DEB_ARCH}.deb" \
-    && deb_url="${TIGERVNC_DEB_MIRROR}/pool/main/t/tigervnc/${deb_file}" \
-    && echo "Downloading ${deb_url}" \
-    && wget -O "${deb_file}" "${deb_url}" \
-    && dpkg -i "${deb_file}" || (apt-get update && apt-get install -y -f) \
+    && for pkg in tigervnc-standalone-server tigervnc-common tigervnc-tools; do \
+        deb_file="${pkg}_${TIGERVNC_VERSION}_${DEB_ARCH}.deb"; \
+        deb_url="${TIGERVNC_DEB_MIRROR}/pool/main/t/tigervnc/${deb_file}"; \
+        echo "Downloading ${deb_url}"; \
+        wget -O "${deb_file}" "${deb_url}"; \
+      done \
+    && dpkg -i ./*.deb || (apt-get update && apt-get install -y -f) \
     && cd /opt \
     && rm -rf /tmp/tigervnc \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
