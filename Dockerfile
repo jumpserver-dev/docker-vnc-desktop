@@ -12,6 +12,9 @@ RUN set -ex \
         equivs \
         dpkg-dev \
         ca-certificates \
+        debian-archive-keyring \
+        debian-keyring \
+        gnupg \
         wget \
     && rm -rf /var/lib/apt/lists/*
 
