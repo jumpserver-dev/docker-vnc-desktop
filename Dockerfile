@@ -1,6 +1,8 @@
 
 FROM python:3.12-slim-bookworm
 ARG TARGETARCH
+ARG TIGERVNC_VERSION="1.15.0"
+ARG TIGERVNC_BASE_URL="https://sourceforge.net/projects/tigervnc/files/stable/${TIGERVNC_VERSION}/ubuntu-22.04LTS"
 
 ARG DEPENDENCIES="                \
     ca-certificates               \
@@ -51,11 +53,20 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=app-apt \
     && mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
-COPY tigervnc/debian/bookworm/linux_${TARGETARCH} /tmp/linux_${TARGETARCH}
 RUN set -ex \
-    && cd /tmp/linux_${TARGETARCH} \
-    && bash build.sh \
-    && rm -rf /tmp/linux_${TARGETARCH}
+    && case "${TARGETARCH}" in \
+        amd64) DEB_ARCH="amd64" ;; \
+        arm64) DEB_ARCH="arm64" ;; \
+        *) echo "Unsupported TARGETARCH ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+    && mkdir -p /tmp/tigervnc && cd /tmp/tigervnc \
+    && deb_file="tigervncserver_${TIGERVNC_VERSION}-1ubuntu1_${DEB_ARCH}.deb" \
+    && echo "Downloading ${deb_file}" \
+    && wget -O "${deb_file}" "${TIGERVNC_BASE_URL}/${deb_file}/download" \
+    && dpkg -i "${deb_file}" || (apt-get update && apt-get install -y -f) \
+    && cd /opt \
+    && rm -rf /tmp/tigervnc \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 RUN set -ex \
     && python3 -m venv /opt/py3
