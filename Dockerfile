@@ -27,11 +27,17 @@ RUN set -ex \
 
 WORKDIR /usr/src/tigervnc-1.15.0+dfsg
 
-# Adjust build-deps to match bookworm availability (bookworm has xorg-server-source 2:21.1.4)
+# Install xorg-server-source from sid to satisfy >= 2:21.1.10 without upgrading the base
 RUN set -ex \
-    && sed -i 's/xorg-server-source (>= 2:21.1.10)/xorg-server-source (>= 2:21.1.4)/' debian/control
-
-RUN set -ex \
+    && echo "deb http://deb.debian.org/debian sid main" > /etc/apt/sources.list.d/sid.list \
+    && cat > /etc/apt/preferences.d/limit-sid <<'EOF' \
+Package: * \
+Pin: release a=unstable \
+Pin-Priority: 50 \
+EOF \
+    && apt-get update \
+    && apt-get install -y -t sid xorg-server-source=2:21.1.12-1 || apt-get install -y -t sid xorg-server-source \
+    && rm -f /etc/apt/sources.list.d/sid.list /etc/apt/preferences.d/limit-sid \
     && apt-get update \
     && apt-get build-dep -y . \
     && rm -rf /var/lib/apt/lists/*
