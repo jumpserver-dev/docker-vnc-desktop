@@ -31,6 +31,7 @@ ARG DEPENDENCIES="                \
     python3-tk                    \
     xauth                         \
     tigervnc-standalone-server    \
+    tigervnc-common               \
     libfile-readbackwards-perl    \
     xdg-user-dirs"
 
