@@ -1,0 +1,77 @@
+diff --git a/common/rfb/SMsgReader.cxx b/common/rfb/SMsgReader.cxx
+index 1ab213a..c55d105 100644
+--- a/common/rfb/SMsgReader.cxx
++++ b/common/rfb/SMsgReader.cxx
+@@ -43,6 +43,12 @@ static core::IntParameter maxCutText("MaxCutText",
+                                      "incoming clipboard update",
+                                      256*1024, 0, INT_MAX);
+ 
++static core::BoolParameter acceptLegacyClipboardUTF8(
++  "AcceptLegacyClipboardUTF8",
++  "Preserve valid UTF-8 received through legacy ClientCutText messages; "
++  "otherwise decode the message as Latin-1",
++  true);
++
+ SMsgReader::SMsgReader(SMsgHandler* handler_, rdr::InStream* is_)
+   : handler(handler_), is(is_), state(MSGSTATE_IDLE)
+ {
+@@ -344,7 +350,13 @@ bool SMsgReader::readClientCutText()
+   std::vector<char> ca(len);
+   is->readBytes((uint8_t*)ca.data(), len);
+ 
+-  std::string utf8(core::latin1ToUTF8(ca.data(), ca.size()));
++  std::string utf8;
++  if (acceptLegacyClipboardUTF8 &&
++      core::isValidUTF8(ca.data(), ca.size())) {
++    utf8.assign(ca.data(), ca.size());
++  } else {
++    utf8 = core::latin1ToUTF8(ca.data(), ca.size());
++  }
+   std::string filtered(core::convertLF(utf8.data(), utf8.size()));
+ 
+   handler->clientCutText(filtered.c_str());
+diff --git a/common/rfb/SMsgWriter.cxx b/common/rfb/SMsgWriter.cxx
+index 80bd9d4..76930b6 100644
+--- a/common/rfb/SMsgWriter.cxx
++++ b/common/rfb/SMsgWriter.cxx
+@@ -24,6 +24,7 @@
+ 
+ #include <stdio.h>
+ 
++#include <core/Configuration.h>
+ #include <core/LogWriter.h>
+ #include <core/string.h>
+ 
+@@ -45,6 +46,12 @@ using namespace rfb;
+ 
+ static core::LogWriter vlog("SMsgWriter");
+ 
++static core::BoolParameter sendLegacyClipboardUTF8(
++  "SendLegacyClipboardUTF8",
++  "Send UTF-8 without Latin-1 conversion through legacy ServerCutText "
++  "messages",
++  true);
++
+ SMsgWriter::SMsgWriter(ClientParams* client_, rdr::OutStream* os_)
+   : client(client_), os(os_),
+     nRectsInUpdate(0), nRectsInHeader(0),
+@@ -99,12 +106,16 @@ void SMsgWriter::writeServerCutText(const char* str)
+   if (strchr(str, '\r') != nullptr)
+     throw std::invalid_argument("Invalid carriage return in clipboard data");
+ 
+-  std::string latin1(core::utf8ToLatin1(str));
++  std::string wire;
++  if (sendLegacyClipboardUTF8)
++    wire = str;
++  else
++    wire = core::utf8ToLatin1(str);
+ 
+   startMsg(msgTypeServerCutText);
+   os->pad(3);
+-  os->writeU32(latin1.size());
+-  os->writeBytes((const uint8_t*)latin1.data(), latin1.size());
++  os->writeU32(wire.size());
++  os->writeBytes((const uint8_t*)wire.data(), wire.size());
+   endMsg();
+ }
+ 

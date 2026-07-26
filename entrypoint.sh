@@ -1,12 +1,5 @@
 #!/usr/bin/env bash
 
-# Default configurations
-SCREEN_WIDTH=${JUMPSERVER_WIDTH:-1280}
-SCREEN_HEIGHT=${JUMPSERVER_HEIGHT:-800}
-GEOMETRY="${SCREEN_WIDTH}""x""${SCREEN_HEIGHT}"
-DEPTH="${JUMPSERVER_DEPTH:-24}"
-DPI="${JUMPSERVER_DPI:-96}"
-
 # Set VNC password
 if [ -z "${JMS_VNC_PASSWORD}" ]; then
     JMS_VNC_PASSWORD=$(head -c100 < /dev/urandom | base64 | tr -dc A-Za-z0-9 | head -c 8; echo)
@@ -76,15 +69,8 @@ EOF
 chmod +x /home/jumpserver/.vnc/xstartup
 chown jumpserver:jumpserver /home/jumpserver/.vnc/xstartup
 
-# Start TigerVNC server with clipboard support
-exec su - jumpserver -c "export JMS_TOKEN=${JMS_TOKEN} && \
-     export HOME=/home/jumpserver && \
-    /usr/bin/vncserver :0 \
-    -geometry ${GEOMETRY} \
-    -depth ${DEPTH} \
-    -dpi ${DPI} \
-    -localhost no \
-    -passwd /home/jumpserver/.vnc/passwd \
-    -fg \
-    -SecurityTypes VncAuth \
-    $@"
+# Run the X server and desktop under the unprivileged account. Arguments passed
+# to the container are forwarded directly to Xtigervnc without shell expansion.
+exec su -s /bin/bash -c \
+    'export HOME=/home/jumpserver; cd "${HOME}"; exec /usr/local/bin/vnc-session.sh "$@"' \
+    jumpserver vnc-session "$@"
